@@ -1,5 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
+import dotenv from 'dotenv';
 import pool from '../config/db.js';
+
+dotenv.config();
 
 const addTestCase = async (req, res) => {
   try {
@@ -29,7 +32,8 @@ const addTestCase = async (req, res) => {
         headers.Authorization = authHeader;
       }
 
-      const executionResponse = await fetch('http://localhost:3001/api/execute', {
+      const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3001';
+      const executionResponse = await fetch(`${apiBaseUrl}/api/execute/system`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({

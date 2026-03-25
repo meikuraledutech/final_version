@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthGuard } from "@/components/auth-guard";
 import api from "@/lib/api";
+import { authStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -572,20 +573,31 @@ function AssignmentsContent() {
 
       for (const testCase of selectedQuestion.testCases) {
         try {
-          const response = await api.post("/api/execute", {
-            code,
-            language: selectedLanguage,
-            input: testCase.input,
-            timeout: 3,
-          });
+          const response = await fetch(
+            process.env.NEXT_PUBLIC_EXECUTE_SYSTEM_API_URL,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authStore.getState().accessToken}`,
+              },
+              body: JSON.stringify({
+                code,
+                language: selectedLanguage,
+                input: testCase.input,
+                timeout: 3,
+              }),
+            }
+          );
+          const data = await response.json();
 
           const outputMatch =
-            response.data.output.trim() === testCase.output.trim();
+            data.output.trim() === testCase.output.trim();
           testValidationResults.push({
-            passed: outputMatch && response.data.success,
-            output: response.data.output.trim(),
+            passed: outputMatch && data.success,
+            output: data.output.trim(),
             expected: testCase.output.trim(),
-            error: response.data.error,
+            error: data.error,
           });
 
           if (!outputMatch || !response.data.success) {
@@ -657,21 +669,32 @@ function AssignmentsContent() {
 
     setIsTesting(true);
     try {
-      const response = await api.post("/api/execute/test", {
-        code,
-        language: selectedLanguage,
-        testCases: selectedQuestion.testCases,
-        timeout: 3,
-      });
+      const response = await fetch(
+        process.env.NEXT_PUBLIC_EXECUTE_SYSTEM_API_URL,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authStore.getState().accessToken}`,
+          },
+          body: JSON.stringify({
+            code,
+            language: selectedLanguage,
+            testCases: selectedQuestion.testCases,
+            timeout: 3,
+          }),
+        }
+      );
+      const data = await response.json();
 
-      setTestResult(response.data);
+      setTestResult(data);
       // Store result for current question
       resultStorageRef.current[currentQuestionIdRef.current] = {
         executionResult: null,
-        testResult: response.data,
+        testResult: data,
       };
       // Mark as completed if test passed
-      if (response.data.success) {
+      if (data.success) {
         completedQuestionsRef.current.add(currentQuestionIdRef.current);
         setCompletedCount((prev) => prev + 1);
       }

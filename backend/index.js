@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import collegeRoutes from './routes/collegeRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -9,8 +10,10 @@ import questionRoutes from './routes/questionRoutes.js';
 import executionRoutes from './routes/executionRoutes.js';
 import testRoutes from './routes/testRoutes.js';
 
+dotenv.config();
+
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // Enable CORS for all routes
 app.use(cors());
