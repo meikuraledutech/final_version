@@ -1,6 +1,7 @@
-import { execSync } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -149,4 +150,169 @@ const executeCode = async (req, res) => {
   }
 };
 
-export { executeCode };
+const executeCodeSystem = async (req, res) => {
+  try {
+    const { code, language, input = '', timeout = 3 } = req.body;
+
+    // Validation
+    if (!code) {
+      return res.status(400).json({ error: 'Code is required' });
+    }
+
+    if (!language) {
+      return res.status(400).json({ error: 'Language is required' });
+    }
+
+    const supportedLanguages = ['python', 'java', 'c', 'cpp'];
+    if (!supportedLanguages.includes(language)) {
+      return res.status(400).json({
+        error: `Unsupported language. Supported: ${supportedLanguages.join(', ')}`
+      });
+    }
+
+    // Create temporary directory
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'code-exec-'));
+    const startTime = Date.now();
+    let output = '';
+    let error = '';
+    let success = true;
+
+    try {
+      if (language === 'python') {
+        const scriptPath = path.join(tmpDir, 'script.py');
+        fs.writeFileSync(scriptPath, code);
+
+        const result = spawnSync('python3', [scriptPath], {
+          input: input,
+          encoding: 'utf-8',
+          timeout: timeout * 1000,
+          maxBuffer: 10 * 1024 * 1024
+        });
+
+        output = result.stdout || '';
+        error = result.stderr || '';
+        success = result.status === 0 || result.status === null;
+
+      } else if (language === 'java') {
+        const className = 'Main';
+        const javaFile = path.join(tmpDir, `${className}.java`);
+        fs.writeFileSync(javaFile, code);
+
+        // Compile
+        const compileResult = spawnSync('javac', [javaFile], {
+          encoding: 'utf-8',
+          timeout: timeout * 1000
+        });
+
+        if (compileResult.status !== 0) {
+          error = compileResult.stderr || compileResult.stdout || 'Compilation failed';
+          success = false;
+        } else {
+          // Execute
+          const execResult = spawnSync('java', ['-cp', tmpDir, className], {
+            input: input,
+            encoding: 'utf-8',
+            timeout: timeout * 1000,
+            maxBuffer: 10 * 1024 * 1024
+          });
+
+          output = execResult.stdout || '';
+          error = execResult.stderr || '';
+          success = execResult.status === 0 || execResult.status === null;
+        }
+
+      } else if (language === 'c') {
+        const cFile = path.join(tmpDir, 'code.c');
+        const exeFile = path.join(tmpDir, 'code');
+        fs.writeFileSync(cFile, code);
+
+        // Compile
+        const compileResult = spawnSync('gcc', ['-o', exeFile, cFile], {
+          encoding: 'utf-8',
+          timeout: timeout * 1000
+        });
+
+        if (compileResult.status !== 0) {
+          error = compileResult.stderr || compileResult.stdout || 'Compilation failed';
+          success = false;
+        } else {
+          // Execute
+          const execResult = spawnSync(exeFile, [], {
+            input: input,
+            encoding: 'utf-8',
+            timeout: timeout * 1000,
+            maxBuffer: 10 * 1024 * 1024
+          });
+
+          output = execResult.stdout || '';
+          error = execResult.stderr || '';
+          success = execResult.status === 0 || execResult.status === null;
+        }
+
+      } else if (language === 'cpp') {
+        const cppFile = path.join(tmpDir, 'code.cpp');
+        const exeFile = path.join(tmpDir, 'code');
+        fs.writeFileSync(cppFile, code);
+
+        // Compile
+        const compileResult = spawnSync('g++', ['-o', exeFile, cppFile], {
+          encoding: 'utf-8',
+          timeout: timeout * 1000
+        });
+
+        if (compileResult.status !== 0) {
+          error = compileResult.stderr || compileResult.stdout || 'Compilation failed';
+          success = false;
+        } else {
+          // Execute
+          const execResult = spawnSync(exeFile, [], {
+            input: input,
+            encoding: 'utf-8',
+            timeout: timeout * 1000,
+            maxBuffer: 10 * 1024 * 1024
+          });
+
+          output = execResult.stdout || '';
+          error = execResult.stderr || '';
+          success = execResult.status === 0 || execResult.status === null;
+        }
+      }
+
+    } catch (err) {
+      success = false;
+      if (err.killed) {
+        error = `Execution timeout exceeded (${timeout}s)`;
+      } else {
+        error = err.message;
+      }
+    } finally {
+      // Cleanup temp files
+      try {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      } catch (e) {
+        console.error(`Failed to cleanup ${tmpDir}:`, e.message);
+      }
+    }
+
+    const executionTime = (Date.now() - startTime) / 1000;
+
+    res.status(200).json({
+      output: output,
+      error: error || null,
+      executionTime: parseFloat(executionTime.toFixed(3)),
+      success: success,
+      language: language,
+      statusCode: 200,
+      method: 'system'
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      error: 'Execution failed',
+      details: err.message,
+      statusCode: 500
+    });
+  }
+};
+
+export { executeCode, executeCodeSystem };
