@@ -78,7 +78,7 @@ function HomeContent() {
         <div className="flex flex-1 flex-col gap-4 p-4">
           <div className="mx-auto w-full max-w-6xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-3xl font-bold">Welcome to Meikural</h2>
+              <h2 className="text-3xl font-bold">Welcome to Alpha Way Training Academy</h2>
             </div>
 
             {/* Super Admin Dashboard */}

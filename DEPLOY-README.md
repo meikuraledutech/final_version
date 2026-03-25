@@ -448,6 +448,327 @@ curl http://YOUR_IP:3001/api/colleges
 
 ---
 
+## Common Issues & Solutions
+
+### ❌ Issue #1: Node.js Version Mismatch
+
+**Problem:**
+```
+You are using Node.js 18.20.8. For Next.js, Node.js version ">=20.9.0" is required.
+```
+
+**Root Cause:** Amazon Linux ships with Node 18, but Next.js 16+ requires Node 20+
+
+**Solution:**
+```bash
+# Remove old Node.js
+sudo dnf remove -y nodejs nodejs-npm nodejs-full-i18n
+
+# Install Node.js 20 from NodeSource
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo dnf install -y nodejs
+
+# Verify
+node --version  # Should show v20+
+```
+
+**Prevention:** Check Node.js version before starting: `node --version`
+
+---
+
+### ❌ Issue #2: pnpm Command Not Found
+
+**Problem:**
+```
+/home/ec2-user/deploy.sh: line 36: pnpm: command not found
+```
+
+**Root Cause:** pnpm was not installed globally
+
+**Solution:**
+```bash
+sudo npm install -g pnpm
+
+# Verify
+pnpm --version
+```
+
+**Prevention:** Install pnpm immediately after Node.js
+
+---
+
+### ❌ Issue #3: TypeScript Compilation Error - Undefined Environment Variable
+
+**Problem:**
+```
+Type error: No overload matches this call.
+Argument of type 'string | undefined' is not assignable to parameter of type 'string | Request | URL'.
+```
+
+**Location:** `frontend/app/assignments/page.tsx:577`
+
+**Root Cause:** `process.env.NEXT_PUBLIC_EXECUTE_SYSTEM_API_URL` could be undefined
+
+**Solution:**
+```typescript
+// Before (❌ fails)
+const response = await fetch(
+  process.env.NEXT_PUBLIC_EXECUTE_SYSTEM_API_URL,
+  { ... }
+);
+
+// After (✅ works)
+const apiUrl = process.env.NEXT_PUBLIC_EXECUTE_SYSTEM_API_URL ||
+  `${process.env.NEXT_PUBLIC_API_BASE_URL}/execute/system`;
+const response = await fetch(apiUrl, { ... });
+```
+
+**Prevention:** Always provide fallback values for environment variables
+
+---
+
+### ❌ Issue #4: Frontend Build Missing - 502 Bad Gateway
+
+**Problem:**
+```
+Error: Could not find a production build in the '.next' directory.
+Try building your app with 'next build' before starting the production server.
+```
+
+**Root Cause:** `next start` requires a build, but `pnpm build` wasn't run
+
+**Solution:**
+```bash
+cd frontend
+pnpm build  # Creates .next directory
+pm2 restart frontend
+```
+
+**Prevention:** Always build frontend before deploying with `pnpm start`
+
+---
+
+### ❌ Issue #5: Double `/api` Path in URL
+
+**Problem:**
+```
+POST http://43.205.18.222:3001/api/api/auth/login 404 (Not Found)
+```
+
+**Root Cause:** `NEXT_PUBLIC_API_BASE_URL` was set to `http://IP:3001/api` and code was appending `/api` again
+
+**Solution:**
+
+Update `frontend/.env.local`:
+```env
+# ❌ WRONG - causes /api/api/...
+NEXT_PUBLIC_API_BASE_URL=http://43.205.18.222:3001/api
+
+# ✅ CORRECT - code adds /api automatically
+NEXT_PUBLIC_API_BASE_URL=http://43.205.18.222:3001
+```
+
+Then rebuild:
+```bash
+cd frontend && pnpm build && pm2 restart frontend
+```
+
+**Prevention:** Check the API client code to see if it appends `/api` automatically
+
+---
+
+### ❌ Issue #6: PostgreSQL Ident Authentication Failed
+
+**Problem:**
+```
+Migration error: Ident authentication failed for user "postgres"
+```
+
+**Root Cause:** PostgreSQL's `pg_hba.conf` was using "ident" (OS-based) authentication instead of password-based
+
+**Solution:**
+
+Step 1: Update authentication method
+```bash
+sudo sed -i 's/ident/md5/g' /var/lib/pgsql/data/pg_hba.conf
+sudo systemctl restart postgresql
+```
+
+Step 2: Reset postgres user password
+```bash
+sudo -u postgres psql << SQL
+ALTER USER postgres WITH PASSWORD 'postgres';
+\q
+SQL
+```
+
+Step 3: Verify connection
+```bash
+PGPASSWORD=postgres psql -h localhost -U postgres -c "SELECT 1"
+```
+
+**Prevention:** Always reset PostgreSQL password immediately after installation
+
+---
+
+### ❌ Issue #7: Nested Git Repository
+
+**Problem:**
+```
+fatal: not a git repository (or any of the parent directories): .git
+```
+
+**Root Cause:** Frontend had its own `.git` directory, conflicting with root repository
+
+**Solution:**
+```bash
+rm -rf frontend/.git
+```
+
+**Prevention:** Ensure clean repository structure before cloning
+
+---
+
+### ❌ Issue #8: Duplicate Nginx Upstream Definitions
+
+**Problem:**
+```
+nginx: [emerg] duplicate upstream "frontend" in /etc/nginx/conf.d/domains.conf:1
+```
+
+**Root Cause:** Multiple config files had the same `upstream` definitions
+
+**Solution:**
+
+Create separate files:
+1. `upstreams.conf` - Only upstream definitions
+2. `domains.conf` - Server blocks
+3. Remove old/conflicting files
+
+```bash
+sudo rm -f /etc/nginx/conf.d/app.conf /etc/nginx/conf.d/default-ip.conf
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**Prevention:** Consolidate upstream definitions into single file
+
+---
+
+### ❌ Issue #9: Ports Not Accessible from Internet
+
+**Problem:**
+```
+curl: (7) Failed to connect to port 3000: Connection refused (from browser)
+```
+
+**Root Cause:** AWS Lightsail firewall (security group) blocking ports 3000 & 3001
+
+**Solution:**
+
+Open ports in Lightsail console:
+1. Go to AWS Lightsail console → Instances
+2. Click your instance → Networking tab
+3. Add firewall rules:
+   - Protocol: TCP, Port: 3000
+   - Protocol: TCP, Port: 3001
+4. Click Create
+
+Or via CLI (if permissions allow):
+```bash
+aws lightsail open-instance-public-ports \
+  --instance-name Lightsail-Instance \
+  --port-info fromPort=3000,toPort=3000,protocol=tcp \
+  --region ap-south-1
+```
+
+**Prevention:** Open ports BEFORE deploying
+
+---
+
+### ❌ Issue #10: SSL/Domain Access Going to Infinite Loop
+
+**Problem:**
+```
+Domain access: https://platform.smart-mcq.com/ causes infinite redirect
+```
+
+**Root Cause:** SSL certificate not valid, or HTTP/HTTPS mismatch
+
+**Solution:**
+
+For development, disable SSL and use HTTP:
+```nginx
+# Use only HTTP (port 80), no SSL
+server {
+    listen 80;  # HTTP only
+    server_name platform.smart-mcq.com;
+    # ... proxy configuration
+}
+```
+
+For production, use Let's Encrypt:
+```bash
+sudo dnf install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d platform.smart-mcq.com -d api.smart-mcq.com
+```
+
+**Prevention:** Use HTTP during development, add SSL when ready
+
+---
+
+### ❌ Issue #11: Services Showing Online but Not Responding
+
+**Problem:**
+```
+pm2 status shows "online" but curl returns "Connection refused"
+```
+
+**Root Cause:** Services started but crashed immediately (check logs!)
+
+**Solution:**
+```bash
+# Always check logs first
+pm2 logs frontend --lines 50
+pm2 logs backend --lines 50
+
+# Then check if ports are listening
+sudo netstat -tlnp | grep -E ':(3000|3001)'
+
+# Restart with fresh logs
+pm2 kill
+pm2 start <service>
+```
+
+**Prevention:** Always check PM2 logs when services fail
+
+---
+
+### ❌ Issue #12: API Requires Access Token But Gets 404
+
+**Problem:**
+```
+GET http://43.205.18.222:3001/api/colleges returns 404
+```
+
+**Root Cause:** Endpoint requires authentication token
+
+**Solution:**
+
+Get token first:
+```bash
+TOKEN=$(curl -s -X POST http://43.205.18.222:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@meikural.com","password":"admin123"}' | jq '.accessToken' | tr -d '"')
+
+# Use token in requests
+curl -H "Authorization: Bearer $TOKEN" \
+  http://43.205.18.222:3001/api/colleges
+```
+
+**Prevention:** Read API documentation and include auth tokens for protected endpoints
+
+---
+
 ## Troubleshooting
 
 ### PostgreSQL Connection Failed

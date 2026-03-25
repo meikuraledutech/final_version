@@ -11,9 +11,9 @@ const firaSans = Fira_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Meikural - Online Coding Platform for Learning & Practice",
+  title: "Alpha Way Training Academy - Online Coding Platform for Learning & Practice",
   description:
-    "Master programming languages with Meikural's interactive coding platform. Practice Python, Java, C, and C++ with real-time code execution, instant feedback, and comprehensive test cases. Perfect for students, educators, and coding enthusiasts.",
+    "Master programming languages with Alpha Way Training Academy's interactive coding platform. Practice Python, Java, C, and C++ with real-time code execution, instant feedback, and comprehensive test cases. Perfect for students, educators, and coding enthusiasts.",
   keywords: [
     "coding platform",
     "online code editor",
@@ -31,33 +31,33 @@ export const metadata: Metadata = {
     "coding lessons",
     "edtech",
   ],
-  authors: [{ name: "Meikural" }],
-  creator: "Meikural",
-  publisher: "Meikural",
-  metadataBase: new URL("https://meikural.app"),
+  authors: [{ name: "Alpha Way Training Academy" }],
+  creator: "Alpha Way Training Academy",
+  publisher: "Alpha Way Training Academy",
+  metadataBase: new URL("https://alphawaytranining.academy"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://meikural.app",
-    title: "Meikural - Online Coding Platform for Learning & Practice",
+    url: "https://alphawaytranining.academy",
+    title: "Alpha Way Training Academy - Online Coding Platform for Learning & Practice",
     description:
-      "Learn and practice coding with Meikural. Execute code instantly, test your solutions against multiple test cases, and improve your programming skills across Python, Java, C, and C++.",
-    siteName: "Meikural",
+      "Learn and practice coding with Alpha Way Training Academy. Execute code instantly, test your solutions against multiple test cases, and improve your programming skills across Python, Java, C, and C++.",
+    siteName: "Alpha Way Training Academy",
     images: [
       {
         url: "/img/logo.png",
         width: 1200,
         height: 630,
-        alt: "Meikural - Online Coding Platform",
+        alt: "Alpha Way Training Academy - Online Coding Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Meikural - Online Coding Platform for Learning & Practice",
+    title: "Alpha Way Training Academy - Online Coding Platform for Learning & Practice",
     description:
       "Practice coding with instant execution and test case validation. Learn Python, Java, C, and C++ through interactive programming challenges.",
     images: ["/img/logo.png"],

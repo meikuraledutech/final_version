@@ -147,7 +147,7 @@ const navigationByRole = {
 const data = {
   teams: [
     {
-      name: "Meikural",
+      name: "Alpha Way Training Academy",
       logo: SmartFormsIcon,
       plan: "Pro",
     }
