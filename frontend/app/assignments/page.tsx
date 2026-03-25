@@ -601,7 +601,7 @@ function AssignmentsContent() {
             error: data.error,
           });
 
-          if (!outputMatch || !response.data.success) {
+          if (!outputMatch || !data.success) {
             allTestsPassed = false;
           }
         } catch (error) {
@@ -670,8 +670,9 @@ function AssignmentsContent() {
 
     setIsTesting(true);
     try {
+      const apiUrl = process.env.NEXT_PUBLIC_EXECUTE_SYSTEM_API_URL || `${process.env.NEXT_PUBLIC_API_BASE_URL}/execute/system`;
       const response = await fetch(
-        process.env.NEXT_PUBLIC_EXECUTE_SYSTEM_API_URL,
+        apiUrl,
         {
           method: "POST",
           headers: {
