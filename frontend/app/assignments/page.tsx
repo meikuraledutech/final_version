@@ -573,8 +573,9 @@ function AssignmentsContent() {
 
       for (const testCase of selectedQuestion.testCases) {
         try {
+          const apiUrl = process.env.NEXT_PUBLIC_EXECUTE_SYSTEM_API_URL || `${process.env.NEXT_PUBLIC_API_BASE_URL}/execute/system`;
           const response = await fetch(
-            process.env.NEXT_PUBLIC_EXECUTE_SYSTEM_API_URL,
+            apiUrl,
             {
               method: "POST",
               headers: {
