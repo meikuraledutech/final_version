@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Java Runtime
+  java-runner:
+    image: eclipse-temurin:17-jdk-focal
+    container_name: java-runner
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    volumes:
+      - /tmp/submissions:/code:rw
+    networks:
+      - code-executor
+    entrypoint: ["sleep", "infinity"]
+
+  # Python Runtime
+  python-runner:
+    image: python:3.11-slim
+    container_name: python-runner
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    volumes:
+      - /tmp/submissions:/code:rw
+    networks:
+      - code-executor
+    entrypoint: ["sleep", "infinity"]
+
+  # C Runtime
+  c-runner:
+    image: gcc:11
+    container_name: c-runner
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    volumes:
+      - /tmp/submissions:/code:rw
+    networks:
+      - code-executor
+    entrypoint: ["sleep", "infinity"]
+
+  # C++ Runtime
+  cpp-runner:
+    image: gcc:11
+    container_name: cpp-runner
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    volumes:
+      - /tmp/submissions:/code:rw
+    networks:
+      - code-executor
+    entrypoint: ["sleep", "infinity"]
+
+networks:
+  code-executor:
+    driver: bridge
